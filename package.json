@@ -1,0 +1,8 @@
+{
+  "name": "bot-stats",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "track": "node tracker.mjs"
+  }
+}
