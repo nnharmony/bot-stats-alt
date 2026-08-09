@@ -87,6 +87,7 @@
 
 .bot-picker summary{
   cursor:pointer;
+  font-size:13px;
 }
 
 #compareBots{
@@ -113,7 +114,7 @@
 
 .compare-table{
   margin-top:18px;
-  font-size:12px;
+  font-size:13px;
 }
 
 .main-table{
@@ -121,6 +122,15 @@
 }
 
 @media(max-width:650px){
+  .compare-table{
+    font-size:12px;
+  }
+  #compareBots label{
+    font-size:12px;
+  }
+  .bot-picker summary{
+    font-size:12px;
+  }
   .main-table{
     font-size:12px;
   }
@@ -177,7 +187,7 @@
     <option value="1">1 day</option>
   </select>
 
-  <button id="resetZoom">Reset</button>
+  <button id="resetZoom">Zoom</button>
 
 </div>
 
