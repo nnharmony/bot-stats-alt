@@ -1,3 +1,18 @@
 {
-  "snapshots": []
+  "snapshots": [
+    {
+      "timestamp": "2026-08-09T12:54:36.167Z",
+      "bots": [
+        {
+          "cid": "arVXp",
+          "name": "Older brother",
+          "messages": null,
+          "collectors": null,
+          "stale": true,
+          "error": "Failed to parse URL from undefined"
+        }
+      ]
+    }
+  ],
+  "generated_at": "2026-08-09T12:54:36.167Z"
 }
