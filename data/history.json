@@ -12,7 +12,19 @@
           "error": "Failed to parse URL from undefined"
         }
       ]
+    },
+    {
+      "timestamp": "2026-08-09T13:15:03.892Z",
+      "bots": [
+        {
+          "cid": "arVXp",
+          "name": "Older brother",
+          "url": "https://www.polybuzz.ai/character/profile/older-brother-arVXp?pre_source=1",
+          "messages": 0,
+          "collectors": 1
+        }
+      ]
     }
   ],
-  "generated_at": "2026-08-09T12:54:36.167Z"
+  "generated_at": "2026-08-09T13:15:03.892Z"
 }
