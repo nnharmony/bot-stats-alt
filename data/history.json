@@ -271,7 +271,26 @@
           "collectors": 1
         }
       ]
+    },
+    {
+      "timestamp": "2026-08-23T11:35:48.441Z",
+      "bots": [
+        {
+          "cid": "arVXp",
+          "name": "Older brother",
+          "url": "https://www.polybuzz.ai/character/profile/older-brother-arVXp?pre_source=1",
+          "messages": 679,
+          "collectors": 2
+        },
+        {
+          "cid": "asP7e",
+          "name": "Daddy",
+          "url": "https://www.polybuzz.ai/character/profile/daddy-asP7e?pre_source=1",
+          "messages": 298,
+          "collectors": 1
+        }
+      ]
     }
   ],
-  "generated_at": "2026-08-22T12:22:53.264Z"
+  "generated_at": "2026-08-23T11:35:48.441Z"
 }
