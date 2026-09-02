@@ -503,7 +503,39 @@
           "collectors": 1
         }
       ]
+    },
+    {
+      "timestamp": "2026-09-02T12:40:54.961Z",
+      "bots": [
+        {
+          "cid": "arVXp",
+          "name": "Older brother",
+          "url": "https://www.polybuzz.ai/character/profile/older-brother-arVXp?pre_source=1",
+          "messages": 1027,
+          "collectors": 2,
+          "stale": true,
+          "error": "No interaction statistics found"
+        },
+        {
+          "cid": "asP7e",
+          "name": "Daddy",
+          "url": "https://www.polybuzz.ai/character/profile/daddy-asP7e?pre_source=1",
+          "messages": 303,
+          "collectors": 1,
+          "stale": true,
+          "error": "No interaction statistics found"
+        },
+        {
+          "cid": "aPetY",
+          "name": "Don",
+          "url": "https://www.polybuzz.ai/character/profile/don-aPetY?pre_source=1",
+          "messages": 17,
+          "collectors": 1,
+          "stale": true,
+          "error": "No interaction statistics found"
+        }
+      ]
     }
   ],
-  "generated_at": "2026-09-01T15:43:47.330Z"
+  "generated_at": "2026-09-02T12:40:54.961Z"
 }
