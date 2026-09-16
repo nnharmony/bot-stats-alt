@@ -134,6 +134,15 @@ th:first-child,td:first-child{text-align:left}
   font-size:13px;
 }
 
+
+#capGroupButton{
+  width:100%;
+  text-align:left;
+  margin:3px 0;
+  padding:7px 8px;
+  font-size:13px;
+}
+
 .chart-area{
   height:340px;
   position:relative;
@@ -720,7 +729,7 @@ th:first-child,td:first-child{text-align:left}
     </div>
 
     <div class="saved-events">
-      <h3>saved events</h3>
+      <h3 id="savedEventsTitle">profile — events</h3>
       <table>
         <thead>
           <tr>
@@ -947,24 +956,29 @@ function getGraphDays(){
   }
 
   if(period!=='all' && days.length){
-    const endTime=
-      new Date(
-        days.at(-1).snapshot.timestamp
-      ).getTime();
 
-    const cutoff=
-      endTime-
-      (
-        Number(period)*
-        24*60*60*1000
-      );
-
-    days=days.filter(
-      item=>
+    if(period==='1'){
+      days=days.slice(-2);
+    }else{
+      const endTime=
         new Date(
-          item.snapshot.timestamp
-        ).getTime()>=cutoff
-    );
+          days.at(-1).snapshot.timestamp
+        ).getTime();
+
+      const cutoff=
+        endTime-
+        (
+          Number(period)*
+          24*60*60*1000
+        );
+
+      days=days.filter(
+        item=>
+          new Date(
+            item.snapshot.timestamp
+          ).getTime()>=cutoff
+      );
+    }
   }
 
   return days;
@@ -1094,6 +1108,12 @@ async function loadStatsData(){
     );
 
   compareBots.innerHTML=`
+    <button
+      type="button"
+      id="capGroupButton"
+      data-mode="capped"
+    >Capped</button>
+
     <label>
       <input
         type="checkbox"
@@ -1752,18 +1772,59 @@ document.querySelector('#compareBots')
     'change',
     e=>{
 
-      if(
-        e.target.id===
-        'selectAllBots'
-      ){
+      if(e.target.id==='selectAllBots'){
         document.querySelectorAll(
           '#compareBots input[type="checkbox"]:not(#selectAllBots):not(#totalProfile)'
         )
-        .forEach(
-          cb=>
-            cb.checked=
-              e.target.checked
-        );
+        .forEach(cb=>{
+          cb.checked=e.target.checked;
+        });
+      }
+
+      drawCompareChart();
+    }
+  );
+
+
+document.querySelector('#compareBots')
+  .addEventListener(
+    'click',
+    e=>{
+      const button=e.target.closest('#capGroupButton');
+
+      if(!button){
+        return;
+      }
+
+      const cappedCids=new Set(
+        eventsState.events
+          .filter(event=>
+            Array.isArray(event.tags) &&
+            event.tags.includes('capped')
+          )
+          .map(event=>event.cid)
+      );
+
+      const mode=button.dataset.mode || 'capped';
+
+      document.querySelectorAll(
+        '#compareBots input[type="checkbox"]:not(#selectAllBots):not(#totalProfile)'
+      )
+      .forEach(cb=>{
+        cb.checked=
+          mode==='capped'
+            ? cappedCids.has(cb.value)
+            : !cappedCids.has(cb.value);
+      });
+
+      document.querySelector('#selectAllBots').checked=false;
+
+      if(mode==='capped'){
+        button.dataset.mode='uncapped';
+        button.textContent='Uncapped';
+      }else{
+        button.dataset.mode='capped';
+        button.textContent='Capped';
       }
 
       drawCompareChart();
@@ -1925,22 +1986,9 @@ function eventBotLabel(cid){
 
 
 function eventTagLabel(tag){
-  const icons = {
-    created: '💟',
-    alert: '⚠️',
-    new: '🆕',
-    avatar: '👤',
-    banned: '🚫',
-    tagged: '⬆️',
-    edit: '☑️',
-    unbanned: '🔘',
-    capped: '🔄',
-    top: '🔝',
-    violation: '⛔️',
-    freeze: '*️⃣'
-  };
-
-  return icons[tag] || tag;
+  return EVENT_TAGS.find(
+    item=>item.id===tag
+  )?.label || tag;
 }
 
 
@@ -2072,17 +2120,36 @@ function renderEvents(){
   const rows=
     document.querySelector('#eventsRows');
 
-  if(!eventsState.events.length){
+  const selectedCid=
+    document.querySelector('#eventBot')?.value || '__profile__';
+
+  const title=
+    document.querySelector('#savedEventsTitle');
+
+  if(title){
+    title.textContent=
+      eventBotLabel(selectedCid)+
+      ' — events';
+  }
+
+  const visibleEvents=
+    eventsState.events.filter(
+      event=>event.cid===selectedCid
+    );
+
+  if(!visibleEvents.length){
     rows.innerHTML=`
       <tr>
-        <td colspan="5">No events yet</td>
+        <td colspan="5">
+          No events for ${eventBotLabel(selectedCid)}
+        </td>
       </tr>
     `;
     return;
   }
 
   rows.innerHTML=
-    eventsState.events
+    visibleEvents
       .map(event=>{
         const visibleTags=[...(event.tags || [])];
 
@@ -2120,7 +2187,6 @@ function renderEvents(){
       })
       .join('');
 }
-
 
 function eventsForSelection(){
   const date=document.querySelector('#eventDate').value;
@@ -2577,7 +2643,10 @@ function initEventsTracker(){
   document.querySelector('#eventBot')
     .addEventListener(
       'change',
-      loadEventForSelection
+      ()=>{
+        loadEventForSelection();
+        renderEvents();
+      }
     );
 
   document.querySelector('#eventSave')
@@ -2728,12 +2797,68 @@ document.querySelector('#siteUnlockButton')
   );
 
 
-document.querySelector('#sitePassword')
+const sitePasswordInput=
+  document.querySelector('#sitePassword');
+
+let previousPasswordLength=0;
+let siteUnlockBusy=false;
+
+async function autoSiteUnlock(){
+  if(siteUnlockBusy){
+    return;
+  }
+
+  const password=sitePasswordInput.value;
+
+  if(!password){
+    return;
+  }
+
+  siteUnlockBusy=true;
+
+  try{
+    await siteUnlock();
+  }finally{
+    siteUnlockBusy=false;
+  }
+}
+
+sitePasswordInput
   .addEventListener(
     'keydown',
     event=>{
       if(event.key==='Enter'){
-        siteUnlock();
+        autoSiteUnlock();
+      }
+    }
+  );
+
+sitePasswordInput
+  .addEventListener(
+    'input',
+    ()=>{
+      const currentLength=sitePasswordInput.value.length;
+
+      if(
+        previousPasswordLength===0 &&
+        currentLength>1
+      ){
+        setTimeout(
+          autoSiteUnlock,
+          100
+        );
+      }
+
+      previousPasswordLength=currentLength;
+    }
+  );
+
+sitePasswordInput
+  .addEventListener(
+    'change',
+    ()=>{
+      if(sitePasswordInput.value){
+        autoSiteUnlock();
       }
     }
   );
