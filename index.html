@@ -2951,6 +2951,8 @@ body.dashboard-shell .stale{color:#c4aecb !important}
 
 /* top slots + freeze pattern monitor */
 .dashboard-top-tabs{display:flex;align-items:center;gap:5px;min-width:0}
+.dashboard-top-actions{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.dashboard-top-actions button[hidden]{display:none !important}
 .dashboard-top-tab{
   border:1px solid transparent !important;
   border-radius:9px !important;
@@ -3054,9 +3056,9 @@ body.dashboard-shell .stale{color:#c4aecb !important}
   body.dashboard-shell .main-table td{display:block !important;border:0 !important;padding:0 !important;min-width:0 !important}
   body.dashboard-shell .main-table td:nth-child(1){grid-column:1/3;grid-row:1;text-align:left !important;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   body.dashboard-shell .main-table td:nth-child(4){grid-column:3;grid-row:1;text-align:right !important;font-size:12px;font-weight:850;white-space:nowrap}
-  body.dashboard-shell .main-table td:nth-child(2){grid-column:1;grid-row:2;text-align:left !important;color:var(--dash-muted);font-size:8px;white-space:nowrap}
-  body.dashboard-shell .main-table td:nth-child(3){grid-column:2;grid-row:2;text-align:left !important;color:var(--dash-muted);font-size:8px;white-space:nowrap}
-  body.dashboard-shell .main-table td:nth-child(5){grid-column:3;grid-row:2;text-align:right !important;color:var(--dash-muted);font-size:8px;white-space:nowrap}
+  body.dashboard-shell .main-table td:nth-child(2){grid-column:1;grid-row:2;text-align:left !important;color:var(--dash-muted);font-size:9.5px;line-height:1.3;white-space:nowrap}
+  body.dashboard-shell .main-table td:nth-child(3){grid-column:2;grid-row:2;text-align:left !important;color:var(--dash-muted);font-size:9.5px;line-height:1.3;white-space:nowrap}
+  body.dashboard-shell .main-table td:nth-child(5){grid-column:3;grid-row:2;text-align:right !important;color:var(--dash-muted);font-size:9.5px;line-height:1.3;white-space:nowrap}
   body.dashboard-shell .main-table td:nth-child(2)::before{content:'start ';opacity:.7}
   body.dashboard-shell .main-table td:nth-child(3)::before{content:'now ';opacity:.7}
   body.dashboard-shell .main-table td:nth-child(5)::before{content:'C. ';opacity:.7}
@@ -3176,7 +3178,10 @@ body.dashboard-shell .stale{color:#c4aecb !important}
         <button id="dashboardTopModeSlots" class="dashboard-top-tab active" type="button" data-top-home-mode="slots">top slots</button>
         <button id="dashboardTopModeGrowth" class="dashboard-top-tab" type="button" data-top-home-mode="growth">top growth</button>
       </div>
-      <button id="dashboardTopAction" type="button" data-open-dashboard-view="slots">edit</button>
+      <div class="dashboard-top-actions">
+        <button id="dashboardTopViewAll" type="button" data-open-dashboard-view="bots">view all</button>
+        <button id="dashboardTopAction" type="button" data-open-dashboard-view="slots">edit</button>
+      </div>
     </div>
     <div id="dashboardTopBots" class="dashboard-top-list"><div class="dashboard-empty">loading…</div></div>
   </section>
@@ -7307,20 +7312,30 @@ function cvCalibration(){
 }
 
 function cvCreationBonusForCid(cid,throughDate=''){
-  let bonus=0;
+  const id=String(cid||'');
+  if(!id) return 0;
 
-  cvSortedEntriesAsc().forEach(entry=>{
-    if(String(entry.botCid||'')!==String(cid)) return;
-    if(throughDate && String(entry.date||'')>throughDate) return;
+  // Character estimator rule for this profile:
+  // every character counts as HQ (+30) from the moment it exists.
+  // Settlements remain profile-level ledger adjustments and do not reduce
+  // the character's displayed creation CV.
+  if(!throughDate){
+    return state.meta.has(id) ? 30 : 0;
+  }
 
-    if(entry.type==='compliant_new'){
-      bonus=Math.max(bonus,10);
-    }else if(entry.type==='new' || entry.type==='hq_new'){
-      bonus=Math.max(bonus,30);
-    }
-  });
+  const existedByDate=state.daily.some(day=>
+    String(day.date||'')<=String(throughDate) && !!snapshotBot(day.snapshot,id)
+  );
+  if(existedByDate) return 30;
 
-  return bonus;
+  // Fallback for a creation/unban event that predates the available snapshots.
+  const hasKnownCharacterEvent=cvSortedEntriesAsc().some(entry=>
+    String(entry.botCid||'')===id &&
+    String(entry.date||'')<=String(throughDate) &&
+    ['compliant_new','new','hq_new','unbanned'].includes(entry.type)
+  );
+
+  return hasKnownCharacterEvent ? 30 : 0;
 }
 
 function cvUncappedEstimator(){
@@ -10411,6 +10426,12 @@ function topSlotsGrowthForDate(date,cid){
   return now.messages-before.messages;
 }
 
+function topSlotsMessagesForDate(date,cid){
+  const entry=getDailyEntry(date);
+  const bot=snapshotBot(entry?.snapshot,cid);
+  return Number.isFinite(bot?.messages) ? bot.messages : null;
+}
+
 function topSlotsMovement(date,cid,currentIndex){
   const previousDate=topSlotsPreviousSavedDate(date);
   if(!previousDate) return {label:'',className:'',previousDate:''};
@@ -10426,6 +10447,7 @@ function topSlotsMovement(date,cid,currentIndex){
 function topSlotsRenderHome(){
   const box=document.querySelector('#dashboardTopBots');
   const action=document.querySelector('#dashboardTopAction');
+  const viewAll=document.querySelector('#dashboardTopViewAll');
   if(!box || !action) return;
   topSlotsLoadLocal();
 
@@ -10434,8 +10456,8 @@ function topSlotsRenderHome(){
   });
 
   if(topSlotsState.homeMode==='growth'){
-    action.textContent='view all';
-    action.dataset.openDashboardView='bots';
+    if(viewAll) viewAll.hidden=false;
+    action.hidden=true;
     const top=[...state.bots]
       .filter(bot=>Number.isFinite(bot.growth))
       .sort((a,b)=>(b.growth??-Infinity)-(a.growth??-Infinity))
@@ -10452,6 +10474,8 @@ function topSlotsRenderHome(){
     return;
   }
 
+  if(viewAll) viewAll.hidden=false;
+  action.hidden=false;
   action.textContent='edit';
   action.dataset.openDashboardView='slots';
   const date=topSlotsDefaultDate();
@@ -10463,6 +10487,7 @@ function topSlotsRenderHome(){
 
   box.innerHTML=slots.map((cid,index)=>{
     const name=state.meta.get(cid)?.name || cid;
+    const messages=topSlotsMessagesForDate(date,cid);
     const growth=topSlotsGrowthForDate(date,cid);
     const movement=topSlotsMovement(date,cid,index);
     const pattern=freezePatternForCid(cid,date);
@@ -10473,7 +10498,7 @@ function topSlotsRenderHome(){
       <span class="dashboard-rank">${index+1}</span>
       <div>
         <div class="dashboard-bot-name">${archiveEscape(name)}</div>
-        <div class="dashboard-bot-meta">slot #${index+1}${movement.previousDate?` · vs ${shortGraphDate(movement.previousDate)}`:''}${patternText}</div>
+        <div class="dashboard-bot-meta">${Number.isFinite(messages)?`${fmt.format(messages)} messages · `:''}slot #${index+1}${movement.previousDate?` · vs ${shortGraphDate(movement.previousDate)}`:''}${patternText}</div>
       </div>
       <div class="dashboard-slot-side">
         <span class="dashboard-bot-growth">${Number.isFinite(growth)?dashboardSigned(growth):'—'}</span>
