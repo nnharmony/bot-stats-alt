@@ -78,7 +78,7 @@ for (const bot of bots) {
     });
     console.error(`✗ ${bot.cid} ${bot.name}: ${error.message || error}`);
   }
-  await new Promise(resolve => setTimeout(resolve, 25000));
+  await new Promise(resolve => setTimeout(resolve, 30000));
 }
 
 const snapshot = { timestamp: new Date().toISOString(), bots: results };
